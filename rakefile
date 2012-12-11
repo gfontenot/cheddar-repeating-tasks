@@ -2,8 +2,11 @@ require './lib/tasks/cheddar_tasks'
 
 desc 'Create task'
 task :cheddar do
-  tasks = ["Pay Bill A", "Pay Bill B", "Pay Bill C #bills"]
-  tasks.each do |text|
-    Cheddar::TaskCreator.new(text)
+
+  tasks = Cheddar::TaskCollector.new.tasks
+
+  tasks.each do |task|
+    p task
+    # Cheddar::TaskCreator.new(task['text'])
   end
 end

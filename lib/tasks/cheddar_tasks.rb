@@ -1,4 +1,6 @@
 require 'net/http'
+require 'redis'
+require 'json'
 
 module Cheddar
   class TaskCreator
@@ -10,6 +12,19 @@ module Cheddar
       request.body = "task[text]=#{URI.escape(text)}"
       request['Authorization'] = "Bearer #{ENV['CHEDDAR_BEARER_TEST']}"
       https.request(request)
+    end
+  end
+
+  class TaskCollector
+    def initialize
+      redis_uri = URI.parse(ENV['REDISTOGO_URL'])
+      @redis = Redis.new(host: redis_uri.host, port: redis_uri.port, password: redis_uri.password)
+    end
+
+    def tasks
+      tasks_json = @redis.smembers('tasks')
+      tasks = tasks_json.map { |t_json| JSON.parse(t_json) }
+      tasks.select { |t| t['day_of_month'] == 25 }
     end
   end
 end
