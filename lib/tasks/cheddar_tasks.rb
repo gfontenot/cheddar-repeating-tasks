@@ -24,7 +24,7 @@ module Cheddar
     def tasks
       tasks_json = @redis.smembers('tasks')
       tasks = tasks_json.map { |t_json| JSON.parse(t_json) }
-      tasks.select { |t| t['day_of_month'] == 25 }
+      tasks.select { |t| t['day_of_month'] == DateTime.now.mday }
     end
   end
 end

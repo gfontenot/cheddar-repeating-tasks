@@ -6,7 +6,6 @@ task :cheddar do
   tasks = Cheddar::TaskCollector.new.tasks
 
   tasks.each do |task|
-    p task
-    # Cheddar::TaskCreator.new(task['text'])
+    Cheddar::TaskCreator.new(task['text'])
   end
 end
