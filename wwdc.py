@@ -97,6 +97,8 @@ Reply-To: %s
 Subject: WWDC %s Announcement
 
 Buy your ticket now!
+
+http://developer.apple.com/wwdc
 """%(options.fromAddress, options.toAddress, options.fromAddress, options.year)
 
     # # Use toaddr as the from address on the send mail call.
