@@ -9,7 +9,7 @@
 # is found then the script assumes the conference has been announced.
 #
 # To avoid a flood of emails, the script will broadcast the announcement
-# only once. After the email is sent out the first time, the file 
+# only once. After the email is sent out the first time, the file
 # wwdc-annc-sent.txt is created in the output directory. If this file exists
 # then additional emails are not sent.
 #
@@ -21,7 +21,11 @@
 #
 # Copyright 2012 Kirby Turner
 #
-# Version 1.0
+# Version 1.1
+#
+# Additional contributors:
+#   Eric Price
+#   Matt Martel
 #
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -30,10 +34,10 @@
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in
 # all copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -66,6 +70,8 @@ class Options:
             return password
         elif attrname == 'outputDirectory':
             return outputDirectory
+        elif attrname == 'verify':
+            return False
         else:
             raise AttributeError, attrname
 
@@ -90,15 +96,13 @@ def emailAnnouncement(options):
     if announcementSent(options):
         print 'Annoucement already sent.'
         return
-    
+
     msg = """From: %s
 To: %s
 Reply-To: %s
 Subject: WWDC %s Announcement
 
 Buy your ticket now!
-
-http://developer.apple.com/wwdc
 """%(options.fromAddress, options.toAddress, options.fromAddress, options.year)
 
     # # Use toaddr as the from address on the send mail call.
@@ -112,37 +116,46 @@ http://developer.apple.com/wwdc
     server.login(options.fromAddress, options.password)
     server.sendmail(options.fromAddress, options.toAddress, msg)
     server.quit()
-    
-    f = open(os.path.join(options.outputDirectory, 'wwdc-annc-sent.txt'), 'w')
-    try:
-        f.write('WWDC annoucement sent.')
-    finally:
-        f.close()
 
-    return 
+    if not options.verify:
+        f = open(os.path.join(options.outputDirectory, 'wwdc-annc-sent.txt'), 'w')
+        try:
+            f.write('WWDC annoucement sent.')
+        finally:
+            f.close()
 
-def broadcastAnnoucement(options):
+    return
+
+def broadcastAnnouncement(options):
     print '====> WWDC %s has been announced! <====' % options.year
     if (len(options.toAddress) > 0):
         emailAnnouncement(options)
     return
 
 def checkWebsite(options):
+    if (options.verify):
+        print 'Verify email setup.'
+        broadcastAnnouncement(options)
+        return
+
     html = fetchHTML('https://developer.apple.com/wwdc/')
-    
-    itsOn = False
-    match = re.search('<title>(.*?)</title>', html)
-    title = match.group(1)
-    itsOn = options.year in title
+
+    itsOn = not ("https://devimages.apple.com.edgekey.net/wwdc/images/wwdc2012-june-11-15.jpg" in html)
     if (itsOn):
-        broadcastAnnoucement(options)
+        broadcastAnnouncement(options)
     else:
-        stringToMatch = 'WWDC %s' % options.year
-        itsOn = stringToMatch in html
+        match = re.search('<title>(.*?)</title>', html)
+        title = match.group(1)
+        itsOn = options.year in title
         if (itsOn):
-            broadcastAnnoucement(options)
+            broadcastAnnouncement(options)
         else:
-            print 'No WWDC %s announcement yet' % options.year
+            stringToMatch = 'WWDC %s' % options.year
+            itsOn = stringToMatch in html
+            if (itsOn):
+                broadcastAnnouncement(options)
+            else:
+                print 'No WWDC %s announcement yet' % options.year
 
 def usage():
     print '''usage: %s [options]
@@ -155,20 +168,21 @@ Options and arguments:
 -p portnumber : smtp port number (also --port)
 -P password   : mail server password (also --password)
 -o directory  : output directory (also --output)
+-v            : verfiy that email is set up correctly (also --verify)
 
 ''' % sys.argv[0]
 
 
 def processCmdArgs():
     options = None
-    try: 
-        opts, args = getopt.getopt(sys.argv[1:], 'hy:f:t:s:p:P:o:', ['help', 'year=', 'from=', 'to=', 'server=', 'port=', 'password=', 'output='])
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], 'hy:f:t:s:p:P:o:v', ['help', 'year=', 'from=', 'to=', 'server=', 'port=', 'password=', 'output=', 'verify'])
     except getopt.GetoptError, err:
         #print help information and exit
         print str(err)  # will print something like "option -x not recongized"
         usage()
         return None
-        
+
     if len(opts) == 0:
         usage()
     else :
@@ -193,19 +207,20 @@ def processCmdArgs():
                 options.password = a
             elif o in ('-o', '--output'):
                 options.outputDirectory = a
+            elif o in ('-v', '--verify'):
+                options.verify = True
             else:
                 assert False, 'unhandled option'
-    
+
     return options
 
 
 def main():
     options = processCmdArgs()
     if options == None:    # Will exit if usgae requested or invalid argument found.
-      return 1
+        return 1
 
     checkWebsite(options)
 
 if __name__ == '__main__':
-  sys.exit(main())
- 
+    sys.exit(main())
